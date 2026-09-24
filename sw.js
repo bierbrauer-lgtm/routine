@@ -1,5 +1,5 @@
 // Offline-Cache: erst Netz (für Updates), bei fehlender Verbindung aus dem Cache
-const CACHE = 'routine-v1';
+const CACHE = 'routine-v2';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
