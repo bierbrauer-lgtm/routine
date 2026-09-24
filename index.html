@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Routine">
+<meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1110" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Routine</title>
+<style>
+  :root {
+    --bg: #F4F5F2;
+    --card: #FFFFFF;
+    --text: #16181A;
+    --muted: #6B7075;
+    --line: rgba(0,0,0,.07);
+    --accent: #1F9D63;
+    --accent-soft: rgba(31,157,99,.12);
+    --warn: #C8731F;
+    --warn-soft: rgba(200,115,31,.12);
+    --danger: #D2413A;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 10px rgba(0,0,0,.04);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0E1110;
+      --card: #181C1B;
+      --text: #ECEFED;
+      --muted: #8A918D;
+      --line: rgba(255,255,255,.08);
+      --accent: #3DD68C;
+      --accent-soft: rgba(61,214,140,.14);
+      --warn: #F0A04B;
+      --warn-soft: rgba(240,160,75,.14);
+      --danger: #FF6B63;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 17px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overscroll-behavior-y: none;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { background: none; border: 0; padding: 0; cursor: pointer; }
+  [hidden] { display: none !important; }
+
+  .screen {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 96px);
+  }
+
+  /* ---------- Kopfbereich ---------- */
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+  .date { font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 32px; line-height: 1.1; letter-spacing: -.02em; margin: 4px 0 0; font-weight: 700; }
+  .streak { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .streak b { color: var(--text); font-weight: 600; }
+  .ring { position: relative; width: 64px; height: 64px; flex: none; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 6; }
+  .ring .track { stroke: var(--line); }
+  .ring .bar { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
+  .ring span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Abschnitte ---------- */
+  .section { margin-bottom: 24px; }
+  .section-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 4px 10px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .section-title.warn { color: var(--warn); }
+  details.section > summary { list-style: none; cursor: pointer; }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary .chev { transition: transform .2s; display: inline-block; }
+  details.section[open] > summary .chev { transform: rotate(90deg); }
+
+  /* ---------- To-Do-Zeile ---------- */
+  .item {
+    display: flex; align-items: center; gap: 14px; width: 100%;
+    min-height: 60px; padding: 14px 16px; margin-bottom: 8px;
+    background: var(--card); border-radius: 16px; box-shadow: var(--shadow);
+    text-align: left; overflow: hidden;
+    transition: height .28s ease, opacity .28s ease, margin .28s ease, padding .28s ease, transform .1s ease;
+  }
+  .item:active { transform: scale(.985); }
+  .check {
+    width: 26px; height: 26px; flex: none; border-radius: 50%;
+    border: 2px solid var(--muted); opacity: .6;
+    display: grid; place-items: center;
+    transition: background .2s, border-color .2s, opacity .2s;
+  }
+  .check svg { width: 14px; height: 14px; opacity: 0; transform: scale(.5); transition: opacity .2s, transform .2s; }
+  .item.checked .check, .item.done .check { background: var(--accent); border-color: var(--accent); opacity: 1; }
+  .item.checked .check svg, .item.done .check svg { opacity: 1; transform: scale(1); }
+  .item .title { flex: 1; min-width: 0; font-weight: 500; }
+  .item.checked .title, .item.done .title { text-decoration: line-through; color: var(--muted); }
+  .item .meta { flex: none; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .item.overdue .check { border-color: var(--warn); opacity: 1; }
+  .item.overdue .meta { color: var(--warn); }
+  .item.later { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+  .item.later .title { color: var(--muted); }
+  .item.done { background: transparent; box-shadow: none; min-height: 48px; padding-top: 10px; padding-bottom: 10px; }
+  .item.leaving { opacity: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; min-height: 0; }
+
+  .empty {
+    padding: 28px 20px; border-radius: 16px; background: var(--accent-soft);
+    text-align: center; margin-bottom: 24px;
+  }
+  .empty .big { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .empty .small { font-size: 15px; color: var(--muted); }
+
+  /* ---------- Routine-Einstellungen ---------- */
+  .list { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row:active { background: var(--line); }
+  .row .title { flex: 1; min-width: 0; font-weight: 500; }
+  .row .sub { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row .arrow { color: var(--muted); opacity: .5; }
+  .btn-primary {
+    display: block; width: 100%; padding: 15px; border-radius: 14px;
+    background: var(--accent); color: #fff; font-weight: 600; text-align: center; margin-bottom: 24px;
+  }
+  @media (prefers-color-scheme: dark) { .btn-primary { color: #06140D; } }
+  .btn-plain { color: var(--accent); font-weight: 500; }
+  .note { font-size: 13px; color: var(--muted); margin: -12px 4px 24px; }
+
+  /* ---------- Tab-Leiste ---------- */
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    display: flex; justify-content: center; gap: 8px;
+    padding: 8px 16px calc(env(safe-area-inset-bottom) + 8px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border-top: 1px solid var(--line);
+  }
+  .tab { flex: 1; max-width: 200px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; font-size: 11px; font-weight: 500; color: var(--muted); }
+  .tab svg { width: 26px; height: 26px; }
+  .tab.active { color: var(--accent); }
+
+  /* ---------- Bearbeiten-Sheet ---------- */
+  .backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; justify-content: center; animation: fade .2s ease; }
+  .sheet {
+    width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    padding: 12px 16px calc(env(safe-area-inset-bottom) + 20px);
+    animation: up .28s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes up { from { transform: translateY(100%); } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 16px; }
+  .sheet-head h2 { font-size: 17px; margin: 0; }
+  .field { background: var(--card); border-radius: 14px; padding: 4px 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .field label { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .field label:last-child { border-bottom: 0; }
+  .field input[type=text] { width: 100%; border: 0; outline: 0; background: none; padding: 10px 0; font-size: 17px; }
+  .field input[type=time] { border: 0; background: var(--line); border-radius: 8px; padding: 6px 10px; font-variant-numeric: tabular-nums; min-width: 96px; }
+  .label { margin: 0 4px 8px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip { padding: 8px 14px; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); font-size: 15px; }
+  .chip.on { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent); font-weight: 600; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 24px; }
+  .days .chip { padding: 10px 0; text-align: center; }
+  .btn-danger { display: block; width: 100%; padding: 15px; border-radius: 14px; background: var(--card); color: var(--danger); font-weight: 500; box-shadow: var(--shadow); }
+</style>
+</head>
+<body>
+
+<main id="home" class="screen">
+  <header class="head">
+    <div>
+      <div class="date" id="date"></div>
+      <h1 id="greeting"></h1>
+      <div class="streak" id="streak"></div>
+    </div>
+    <div class="ring" aria-label="Fortschritt">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="track" cx="32" cy="32" r="26"/>
+        <circle class="bar" id="ringBar" cx="32" cy="32" r="26" stroke-dasharray="163.36" stroke-dashoffset="163.36"/>
+      </svg>
+      <span id="ringText"></span>
+    </div>
+  </header>
+  <div id="sections"></div>
+</main>
+
+<main id="routine" class="screen" hidden>
+  <header class="head">
+    <div>
+      <div class="date">Einstellungen</div>
+      <h1>Deine Routine</h1>
+    </div>
+  </header>
+  <button class="btn-primary" id="addBtn">+ Neues To-Do</button>
+  <div id="routineList"></div>
+  <div class="label">Datensicherung</div>
+  <div class="list">
+    <button class="row" id="exportBtn"><span class="title">Backup exportieren</span><span class="arrow">›</span></button>
+    <button class="row" id="importBtn"><span class="title">Backup importieren</span><span class="arrow">›</span></button>
+  </div>
+  <p class="note">Ein neuer Tag beginnt um 4:00 Uhr. Was du nach Mitternacht abhakst, zählt noch zum Vortag.</p>
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-tab="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16.5 9.5"/></svg>
+    Heute
+  </button>
+  <button class="tab" data-tab="routine">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
+    Routine
+  </button>
+</nav>
+
+<script>
+const KEY = 'routine.v1';
+const DAY_START = 4; // bis 4 Uhr nachts zählt noch zum Vortag
+const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const PRESETS = [
+  { label: 'Morgens', start: '06:00', end: '10:00' },
+  { label: 'Mittags', start: '12:00', end: '14:00' },
+  { label: 'Nachmittags', start: '14:00', end: '18:00' },
+  { label: 'Abends', start: '19:00', end: '23:00' },
+];
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+// ---------- Speicher ----------
+function defaultState() {
+  const morning = ['Bett machen', 'Kreatin nehmen', 'Stretching', 'Frühstück', 'WhatsApp checken'];
+  return {
+    version: 1,
+    todos: morning.map(title => ({ id: uid(), title, start: '06:00', end: '10:00', days: [0, 1, 2, 3, 4, 5, 6] })),
+    log: {},
+  };
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && Array.isArray(s.todos)) return { log: {}, ...s };
+  } catch (e) {}
+  return defaultState();
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+let state = load();
+save();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+// ---------- Zeitlogik ----------
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+// Minuten seit Beginn des logischen Tages; Zeiten vor DAY_START gehören ans Tagesende
+const shift = m => (m < DAY_START * 60 ? m + 1440 : m);
+function windowOf(t) {
+  const s = shift(toMin(t.start));
+  let e = shift(toMin(t.end));
+  if (e <= s) e += 1440;
+  return [s, e];
+}
+function logicalNow() {
+  const now = new Date();
+  const date = new Date(now);
+  if (now.getHours() < DAY_START) date.setDate(date.getDate() - 1);
+  date.setHours(12, 0, 0, 0);
+  return { date, min: shift(now.getHours() * 60 + now.getMinutes()) };
+}
+const pad = n => String(n).padStart(2, '0');
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const weekday = d => (d.getDay() + 6) % 7; // 0 = Montag
+const activeTodos = d => state.todos
+  .filter(t => t.days.includes(weekday(d)))
+  .sort((a, b) => windowOf(a)[0] - windowOf(b)[0] || windowOf(a)[1] - windowOf(b)[1]);
+function dayLog(key) {
+  if (!state.log[key]) state.log[key] = { done: {}, total: 0 };
+  return state.log[key];
+}
+
+function streak(today) {
+  const complete = log => log && log.total > 0 && Object.keys(log.done).length >= log.total;
+  let n = complete(state.log[dayKey(today)]) ? 1 : 0;
+  const d = new Date(today);
+  for (let i = 0; i < 1000; i++) {
+    d.setDate(d.getDate() - 1);
+    const log = state.log[dayKey(d)];
+    if (complete(log)) n++;
+    else if (!log && activeTodos(d).length === 0) continue; // freier Tag
+    else break;
+  }
+  return n;
+}
+
+function daysLabel(days) {
+  const s = [...days].sort().join('');
+  if (s === '0123456') return 'Täglich';
+  if (s === '01234') return 'Mo–Fr';
+  if (s === '56') return 'Wochenende';
+  return [...days].sort().map(i => WEEKDAYS[i]).join(', ');
+}
+function periodOf(t) {
+  const h = Math.floor(toMin(t.start) / 60);
+  if (h >= DAY_START && h < 11) return 'Morgens';
+  if (h >= 11 && h < 14) return 'Mittags';
+  if (h >= 14 && h < 18) return 'Nachmittags';
+  return 'Abends';
+}
+
+// ---------- DOM-Helfer ----------
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'html') node.innerHTML = v;
+    else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) if (c != null) node.append(c);
+  return node;
+}
+
+// ---------- Heute ----------
+function renderHome() {
+  const { date, min } = logicalNow();
+  const key = dayKey(date);
+  const todos = activeTodos(date);
+  const log = dayLog(key);
+  if (log.total !== todos.length) { log.total = todos.length; save(); }
+
+  const now = [], overdue = [], later = [], done = [];
+  for (const t of todos) {
+    const [s, e] = windowOf(t);
+    if (log.done[t.id]) done.push(t);
+    else if (min < s) later.push(t);
+    else if (min >= e) overdue.push(t);
+    else now.push(t);
+  }
+  now.sort((a, b) => windowOf(a)[1] - windowOf(b)[1]);
+  done.sort((a, b) => log.done[a.id] - log.done[b.id]);
+
+  // Kopf
+  const h = new Date().getHours();
+  document.getElementById('date').textContent =
+    date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById('greeting').textContent =
+    h < DAY_START ? 'Gute Nacht.' : h < 11 ? 'Guten Morgen.' : h < 17 ? 'Guten Tag.' : 'Guten Abend.';
+  const st = streak(date);
+  document.getElementById('streak').innerHTML = st > 0 ? `🔥 <b>${st}</b> ${st === 1 ? 'Tag' : 'Tage'} komplett in Folge` : '';
+  const total = todos.length, n = done.length;
+  const C = 163.36;
+  document.getElementById('ringBar').setAttribute('stroke-dashoffset', total ? C * (1 - n / total) : C);
+  document.getElementById('ringText').textContent = `${n}/${total}`;
+
+  // Listen
+  const box = document.getElementById('sections');
+  box.replaceChildren();
+
+  if (total === 0) {
+    box.append(el('div', { class: 'empty' },
+      el('div', { class: 'big' }, 'Heute steht nichts an'),
+      el('div', { class: 'small' }, 'Lege unter „Routine“ deine täglichen To-Dos an.')));
+    return;
+  }
+
+  if (now.length) box.append(section('Jetzt', now, 'now'));
+  if (overdue.length) box.append(section('Heute noch offen', overdue, 'overdue', 'warn'));
+
+  if (!now.length && !overdue.length) {
+    const next = later[0];
+    box.append(el('div', { class: 'empty' },
+      el('div', { class: 'big' }, next ? 'Gerade alles erledigt ✓' : 'Tag komplett geschafft 🎉'),
+      el('div', { class: 'small' }, next ? `Als Nächstes: ${next.title} ab ${next.start} Uhr` : 'Alle To-Dos für heute sind abgehakt.')));
+  }
+
+  if (later.length) box.append(collapsible(`Später heute · ${later.length}`, later, 'later', false));
+  if (done.length) box.append(collapsible(`Erledigt · ${done.length}`, done, 'done', false));
+}
+
+function section(title, list, kind, cls = '') {
+  return el('section', { class: 'section' },
+    el('div', { class: `section-title ${cls}` }, title),
+    ...list.map(t => itemRow(t, kind)));
+}
+function collapsible(title, list, kind, open) {
+  const d = el('details', { class: 'section' },
+    el('summary', { class: 'section-title' }, el('span', {}, title), el('span', { class: 'chev' }, '›')),
+    ...list.map(t => itemRow(t, kind)));
+  d.open = open || openSections.has(kind);
+  d.addEventListener('toggle', () => d.open ? openSections.add(kind) : openSections.delete(kind));
+  return d;
+}
+const openSections = new Set();
+
+function itemRow(t, kind) {
+  const meta = kind === 'now' ? `bis ${t.end}` : kind === 'overdue' ? `war bis ${t.end}` : kind === 'later' ? `ab ${t.start}` : '';
+  const row = el('button', { class: `item ${kind}` },
+    el('span', { class: 'check', html: CHECK_SVG }),
+    el('span', { class: 'title' }, t.title),
+    meta ? el('span', { class: 'meta' }, meta) : null);
+  row.addEventListener('click', () => toggle(t.id, row, kind === 'done'));
+  return row;
+}
+
+let busy = false;
+function toggle(id, row, isDone) {
+  if (busy) return;
+  const log = dayLog(dayKey(logicalNow().date));
+  if (log.done[id]) delete log.done[id]; else log.done[id] = Date.now();
+  save();
+  if (isDone) { renderHome(); return; }
+  busy = true;
+  row.classList.add('checked');
+  setTimeout(() => {
+    row.style.height = row.offsetHeight + 'px';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      row.classList.add('leaving');
+      row.style.height = '0px';
+    }));
+  }, 260);
+  setTimeout(() => { busy = false; renderHome(); }, 580);
+}
+
+// ---------- Routine ----------
+function renderRoutine() {
+  const box = document.getElementById('routineList');
+  box.replaceChildren();
+  const sorted = [...state.todos].sort((a, b) => windowOf(a)[0] - windowOf(b)[0] || a.title.localeCompare(b.title));
+  for (const p of ['Morgens', 'Mittags', 'Nachmittags', 'Abends']) {
+    const list = sorted.filter(t => periodOf(t) === p);
+    if (!list.length) continue;
+    box.append(el('div', { class: 'label' }, p));
+    box.append(el('div', { class: 'list' }, ...list.map(t =>
+      el('button', { class: 'row', onclick: () => openEditor(t) },
+        el('span', { class: 'title' }, t.title,
+          el('div', { class: 'sub' }, `${t.start}–${t.end} · ${daysLabel(t.days)}`)),
+        el('span', { class: 'arrow' }, '›')))));
+  }
+  if (!state.todos.length) box.append(el('p', { class: 'note', style: 'margin-top:0' }, 'Noch keine To-Dos angelegt.'));
+}
+
+function openEditor(todo) {
+  const isNew = !todo;
+  const draft = todo ? { ...todo, days: [...todo.days] } : { id: uid(), title: '', start: '06:00', end: '10:00', days: [0, 1, 2, 3, 4, 5, 6] };
+
+  const title = el('input', { type: 'text', placeholder: 'z. B. Kreatin nehmen', value: draft.title, enterkeyhint: 'done' });
+  const start = el('input', { type: 'time', value: draft.start });
+  const end = el('input', { type: 'time', value: draft.end });
+
+  const presetChips = el('div', { class: 'chips' });
+  const syncPresets = () => presetChips.querySelectorAll('.chip').forEach((c, i) =>
+    c.classList.toggle('on', PRESETS[i].start === start.value && PRESETS[i].end === end.value));
+  PRESETS.forEach(p => presetChips.append(el('button', {
+    class: 'chip', type: 'button',
+    onclick: () => { start.value = p.start; end.value = p.end; syncPresets(); },
+  }, p.label)));
+  start.addEventListener('input', syncPresets);
+  end.addEventListener('input', syncPresets);
+  syncPresets();
+
+  const dayChips = el('div', { class: 'days' }, ...WEEKDAYS.map((w, i) => {
+    const c = el('button', { class: 'chip' + (draft.days.includes(i) ? ' on' : ''), type: 'button' }, w);
+    c.addEventListener('click', () => {
+      draft.days = draft.days.includes(i) ? draft.days.filter(x => x !== i) : [...draft.days, i];
+      c.classList.toggle('on');
+    });
+    return c;
+  }));
+
+  const close = () => backdrop.remove();
+  const saveBtn = el('button', { class: 'btn-plain', type: 'button', style: 'font-weight:600' }, 'Sichern');
+  saveBtn.addEventListener('click', () => {
+    draft.title = title.value.trim();
+    draft.start = start.value || '06:00';
+    draft.end = end.value || '10:00';
+    if (!draft.title) { title.focus(); return; }
+    if (!draft.days.length) { alert('Wähle mindestens einen Wochentag.'); return; }
+    if (isNew) state.todos.push(draft);
+    else state.todos[state.todos.findIndex(t => t.id === draft.id)] = draft;
+    save(); close(); renderRoutine(); renderHome();
+  });
+
+  const sheet = el('div', { class: 'sheet' },
+    el('div', { class: 'sheet-head' },
+      el('button', { class: 'btn-plain', type: 'button', onclick: close }, 'Abbrechen'),
+      el('h2', {}, isNew ? 'Neues To-Do' : 'Bearbeiten'),
+      saveBtn),
+    el('div', { class: 'field' }, title),
+    el('div', { class: 'label' }, 'Zeitfenster'),
+    presetChips,
+    el('div', { class: 'field' },
+      el('label', {}, el('span', {}, 'Von'), start),
+      el('label', {}, el('span', {}, 'Bis'), end)),
+    el('div', { class: 'label' }, 'Wochentage'),
+    dayChips,
+    isNew ? null : el('button', {
+      class: 'btn-danger', type: 'button',
+      onclick: () => {
+        if (!confirm(`„${draft.title}“ löschen?`)) return;
+        state.todos = state.todos.filter(t => t.id !== draft.id);
+        delete dayLog(dayKey(logicalNow().date)).done[draft.id];
+        save(); close(); renderRoutine(); renderHome();
+      },
+    }, 'To-Do löschen'));
+
+  const backdrop = el('div', { class: 'backdrop' }, sheet);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  document.body.append(backdrop);
+  if (isNew) setTimeout(() => title.focus(), 300);
+}
+
+// ---------- Backup ----------
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const name = `routine-backup-${dayKey(new Date())}.json`;
+  const file = new File([JSON.stringify(state, null, 2)], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'Routine-Backup' }); } catch (e) {}
+    return;
+  }
+  const a = el('a', { href: URL.createObjectURL(file), download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+const importFile = document.getElementById('importFile');
+document.getElementById('importBtn').addEventListener('click', () => importFile.click());
+importFile.addEventListener('change', async () => {
+  const f = importFile.files[0];
+  importFile.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!Array.isArray(data.todos)) throw new Error();
+    if (!confirm(`Backup mit ${data.todos.length} To-Dos laden? Deine aktuellen Daten werden ersetzt.`)) return;
+    state = { log: {}, ...data };
+    save(); renderRoutine(); renderHome();
+  } catch (e) {
+    alert('Diese Datei ist kein gültiges Routine-Backup.');
+  }
+});
+
+// ---------- Navigation ----------
+document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+  document.getElementById('home').hidden = tab.dataset.tab !== 'home';
+  document.getElementById('routine').hidden = tab.dataset.tab !== 'routine';
+  if (tab.dataset.tab === 'routine') renderRoutine(); else renderHome();
+  window.scrollTo(0, 0);
+}));
+document.getElementById('addBtn').addEventListener('click', () => openEditor(null));
+
+// Beim Öffnen und jede Minute aktualisieren, damit Morgen/Abend automatisch wechseln
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !busy) renderHome(); });
+setInterval(() => { if (!busy && !document.getElementById('home').hidden) renderHome(); }, 60000);
+
+renderHome();
+renderRoutine();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
